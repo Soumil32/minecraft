@@ -1,17 +1,13 @@
 mod block_spawner;
 mod player_movement;
 
-use bevy::{prelude::*, pbr::wireframe::WireframeConfig};
+use bevy::prelude::*;
 use block_spawner::BlockSpawnerPlugin;
 use player_movement::PlayerMovementPlugin;
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::rgb(0.0, 0.7, 1.0)))
-        .insert_resource(WireframeConfig {
-            global: true,
-            default_color: Color::rgb(0.0, 0.0, 0.0),
-        })
         .insert_resource(AmbientLight {
             color: Color::rgb(0.8, 0.8, 0.8),
             brightness: 1.0,
