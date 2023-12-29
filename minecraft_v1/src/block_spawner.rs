@@ -40,7 +40,7 @@ impl VoxelRegistry for BlockRegistry {
     }
     /// Important function that tells our Algorithm if the Voxel is "full", for example, the Air
     /// in minecraft is not "full", but it is still on the chunk data, to singal there is nothing.
-    fn is_covering(&self, voxel: &Self::Voxel, _side: prelude::Face) -> bool {
+    fn is_covering(&self, voxel: &Self::Voxel, _side: Face) -> bool {
         return *voxel != 0;
     }
     /// The center of the Mesh, out mesh is defined in src/default_block.rs, just a constant.
@@ -91,6 +91,7 @@ fn spawn_culled_grid(
         PbrBundle {
             mesh: culled_mesh_handle,
             material: materials.add(StandardMaterial {
+                reflectance: 0.0,
                 base_color_texture: Some(texture_handle),
                 ..default()
             }),

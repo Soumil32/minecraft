@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.12.1", features = ["dynamic_linking"] }
+bevy_flycam = "0.12.0"
 bevy_meshem = "0.3.0"
+bevy_mod_picking = "0.17.0"
+rand = "0.8.5"
+
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

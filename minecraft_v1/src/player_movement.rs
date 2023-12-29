@@ -1,16 +1,16 @@
 use bevy::prelude::*;
 
-const PLAYER_SPEED: f32 = 15.0;
+const _PLAYER_SPEED: f32 = 15.0;
 
 pub struct PlayerMovementPlugin;
 
 impl Plugin for PlayerMovementPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Update, move_player);
+    fn build(&self, _app: &mut App) {
+        
     }
 }
 
-fn move_player(
+fn _move_player(
     time: Res<Time>,
     input: Res<Input<KeyCode>>,
     mut query: Query<&mut Transform, With<Camera>>
@@ -19,26 +19,20 @@ fn move_player(
         let mut translation = transform.translation;
         if input.pressed(KeyCode::W) {
             let forward = transform.forward();
-            translation += forward * time.delta_seconds() * PLAYER_SPEED;
+            translation += forward * time.delta_seconds() * _PLAYER_SPEED;
         }
         if input.pressed(KeyCode::S) {
             let forward = transform.forward();
-            translation -= forward * time.delta_seconds() * PLAYER_SPEED;
+            translation -= forward * time.delta_seconds() * _PLAYER_SPEED;
         }
         if input.pressed(KeyCode::A) {
             let left = transform.left();
-            translation += left * time.delta_seconds() * PLAYER_SPEED;
+            translation += left * time.delta_seconds() * _PLAYER_SPEED;
         }
         if input.pressed(KeyCode::D) {
             let right = transform.right();
-            translation += right * time.delta_seconds() * PLAYER_SPEED;
+            translation += right * time.delta_seconds() * _PLAYER_SPEED;
         }
         transform.translation = translation;
-        if input.pressed(KeyCode::Right) {
-            transform.rotate(Quat::from_rotation_y(-1.0 * time.delta_seconds()));
-        }
-        if input.pressed(KeyCode::Left) {
-            transform.rotate(Quat::from_rotation_y(1.0 * time.delta_seconds()));
-        }
     }
 }
