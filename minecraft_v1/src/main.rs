@@ -1,9 +1,11 @@
 mod block_spawner;
 mod player_movement;
+mod load_texture_atlas;
 
 use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, WireframeConfig}};
 use block_spawner::BlockSpawnerPlugin;
 use player_movement::PlayerMovementPlugin;
+use load_texture_atlas::LoadTextureAtlasPlugin;
 
 fn main() {
     App::new()
@@ -16,6 +18,7 @@ fn main() {
             DefaultPlugins.set(ImagePlugin::default_nearest()),
             BlockSpawnerPlugin,
             PlayerMovementPlugin,
+            LoadTextureAtlasPlugin,
             WireframePlugin,
         ))
         .add_systems(Startup, (spawn_camera, spawn_sun, use_wireframe))
@@ -38,7 +41,7 @@ fn use_wireframe(mut wireframe_config: ResMut<WireframeConfig>) {
 
 fn spawn_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 50.0, 50.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(0.0, 50.0, 50.0),
         ..Default::default()
     });
 }
