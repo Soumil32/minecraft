@@ -34,5 +34,11 @@ fn move_player(
             translation += right * time.delta_seconds() * PLAYER_SPEED;
         }
         transform.translation = translation;
+        if input.pressed(KeyCode::Right) {
+            transform.rotate(Quat::from_rotation_y(-1.0 * time.delta_seconds()));
+        }
+        if input.pressed(KeyCode::Left) {
+            transform.rotate(Quat::from_rotation_y(1.0 * time.delta_seconds()));
+        }
     }
 }

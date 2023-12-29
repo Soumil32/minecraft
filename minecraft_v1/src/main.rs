@@ -1,7 +1,7 @@
 mod block_spawner;
 mod player_movement;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, WireframeConfig}};
 use block_spawner::BlockSpawnerPlugin;
 use player_movement::PlayerMovementPlugin;
 
@@ -16,8 +16,9 @@ fn main() {
             DefaultPlugins.set(ImagePlugin::default_nearest()),
             BlockSpawnerPlugin,
             PlayerMovementPlugin,
+            WireframePlugin,
         ))
-        .add_systems(Startup, (spawn_camera, spawn_sun))
+        .add_systems(Startup, (spawn_camera, spawn_sun, use_wireframe))
         .run();
 
 }
@@ -29,6 +30,10 @@ fn spawn_sun(mut commands: Commands) {
     };
 
     commands.spawn(light);
+}
+
+fn use_wireframe(mut wireframe_config: ResMut<WireframeConfig>) {
+    wireframe_config.global = true;
 }
 
 fn spawn_camera(mut commands: Commands) {
