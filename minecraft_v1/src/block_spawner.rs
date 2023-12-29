@@ -1,16 +1,11 @@
-use bevy::{prelude::*, render::{mesh::{Indices, MeshVertexAttribute, VertexAttributeValues}, render_resource::{PrimitiveTopology, Face}}};
+use bevy::{prelude::*, render::{mesh::Indices, render_resource::{PrimitiveTopology, Face}}};
 // import meshvertextattribute
 use bevy_meshem::prelude::*;
 
 /// Constants for us to use.
 const FACTOR: usize = 100;
-const SPEED: f32 = FACTOR as f32 * 2.0;
 const MESHING_ALGORITHM: MeshingAlgorithm = MeshingAlgorithm::Culling;
 
-#[derive(Resource)]
-struct BlockRegistry {
-    block: Mesh,
-}
 
 #[derive(Component)]
 struct Meshy {
@@ -20,6 +15,11 @@ struct Meshy {
 
 #[derive(Event, Default)]
 struct RegenerateMesh;
+
+#[derive(Resource)]
+struct BlockRegistry {
+    block: Vec<Mesh>,
+}
 
 /// The important part! Without implementing a [`VoxelRegistry`], you can't use the function.
 impl VoxelRegistry for BlockRegistry {
@@ -33,7 +33,7 @@ impl VoxelRegistry for BlockRegistry {
         if *voxel == 0 {
             return VoxelMesh::Null;
         }
-        VoxelMesh::NormalCube(&self.block)
+        VoxelMesh::NormalCube(&self.block[*voxel as usize])
     }
     /// Important function that tells our Algorithm if the Voxel is "full", for example, the Air
     /// in minecraft is not "full", but it is still on the chunk data, to singal there is nothing.
@@ -72,7 +72,7 @@ fn spawn_culled_grid(
     let grid = [1; FACTOR * FACTOR * FACTOR];
     let dims: Dimensions = (FACTOR, FACTOR, FACTOR);
 
-    let (mut culled_mesh, metadata) = mesh_grid(
+    let (culled_mesh, metadata) = mesh_grid(
         dims,
         // Automatically cull the bottom when generating the mesh
         &[Bottom],
@@ -107,34 +107,37 @@ impl Plugin for BlockSpawnerPlugin {
         app.
             add_systems(Startup, spawn_culled_grid)
             .insert_resource(BlockRegistry {
-                block: generate_voxel_mesh(
-                    [1.0, 1.0, 1.0],
-                    [1, 1],
-                    [
-                                (Top, [0, 0]),
-                                (Bottom, [0, 0]),
-                                (Forward, [0, 0]),
-                                (Back, [0, 0]),
-                                (Left, [0, 0]),
-                                (Right, [0, 0]),
-                            ], // texture,
-                    [0.5, 0.5, 0.5],
-                    0.05,
-                    Some(0.8),
-                    1.0,
-                ),
+                block: vec![
+                            Mesh::new(PrimitiveTopology::TriangleList),
+                            generate_voxel_mesh(
+                                [1.0, 1.0, 1.0],
+                                [1, 1],
+                                [
+                                    (Top, [0, 0]),
+                                    (Bottom, [0, 0]),
+                                    (Forward, [0, 0]),
+                                    (Back, [0, 0]),
+                                    (Left, [0, 0]),
+                                    (Right, [0, 0]),
+                                ], // texture,
+                                [0.5, 0.5, 0.5],
+                                0.05,
+                                Some(0.8),
+                                1.0,
+                            )
+                            ],
             });
     }
 }
 
 /// spawn a 3d cube at the origin
-fn spawn_cubes(mut commands: Commands,
+fn _spawn_cubes(mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     asset_server: Res<AssetServer>,
     mut _materials: ResMut<Assets<StandardMaterial>>
 ) {
     
-    let cube_mesh = meshes.add(create_cube_mesh());
+    let cube_mesh = meshes.add(_create_cube_mesh());
     // load in the texture for the cube from the assets folder
     let texture_handle = asset_server.load("textures/blocks/stone.png");
     let material = StandardMaterial {
@@ -167,7 +170,7 @@ fn spawn_cubes(mut commands: Commands,
 }
 
 #[rustfmt::skip]
-fn create_cube_mesh() -> Mesh {
+fn _create_cube_mesh() -> Mesh {
     Mesh::new(PrimitiveTopology::TriangleList)
     .with_inserted_attribute(
         Mesh::ATTRIBUTE_POSITION,
