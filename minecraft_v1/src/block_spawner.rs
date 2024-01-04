@@ -6,7 +6,7 @@ use bevy::{
 };
 // import meshvertextattribute
 use bevy_meshem::prelude::*;
-use crate::load_texture_atlas::TextureAtlas;
+use crate::{load_texture_atlas::TextureAtlas, block_types::BlockType};
 use crate::chunk_manager::*;
 
 /// Constants for us to use.
@@ -163,7 +163,9 @@ fn spawn_chunk(mut commands: Commands,
                 let block = Block {
                     local_position: Vec3::new(x as f32, y as f32, z as f32),
                     absolute_position: Vec3::new(x as f32 + START_X, y as f32 + START_Y, z as f32 + START_Z),
-                    visible: true,
+                    is_visible: true,
+                    block_type: BlockType::Dirt,
+                    is_transparent: false,
                 };
                 chunk.blocks.insert(
                     Position::new(x as isize, y as isize, z as isize),
@@ -172,10 +174,35 @@ fn spawn_chunk(mut commands: Commands,
             }
         }
     }
-    chunks.chunks.insert(Position::new(START_X as isize, START_Y as isize, START_Z as isize), chunk);
 
     let cube_mesh = create_cube_mesh();
-    for block in chunks.chunks.get(&Position::new(START_X as isize, START_Y as isize, START_Z as isize)).unwrap().blocks.values() {
+    for block in chunk.blocks.values() {
+        let block_above = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize + 1, block.local_position.z as isize));
+        let block_below = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize - 1, block.local_position.z as isize));
+        let block_left = chunk.blocks.get(&Position::new(block.local_position.x as isize - 1, block.local_position.y as isize, block.local_position.z as isize));
+        let block_right = chunk.blocks.get(&Position::new(block.local_position.x as isize + 1, block.local_position.y as isize, block.local_position.z as isize));
+        let block_front = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize, block.local_position.z as isize + 1));
+        let block_back = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize, block.local_position.z as isize - 1));
+
+        // if the block is None then it is an air block, meaning we should render it
+        // if all the blocks are Some and even one is transparent, then we should render it
+        // if all the blocks are Some and none are transparent, then we should not render it by continuing the loop
+        // the if statemnet should be a guard clause    
+        if block_above.is_some() && block_left.is_some() && block_right.is_some() && block_front.is_some() && block_back.is_some() && block_below.is_some() {
+            continue;
+        }
+
+        if  (block.local_position.z != 0.0 && block.local_position.z != CHUNK_Z as f32 - 1.0) &&
+            (block_above.is_some() && !block_above.unwrap().is_transparent) && 
+            (block_below.is_some() && !block_below.unwrap().is_transparent) && 
+            (block_left.is_some() && !block_left.unwrap().is_transparent) && 
+            (block_right.is_some() && !block_right.unwrap().is_transparent) && 
+            (block_front.is_some() && !block_front.unwrap().is_transparent) && 
+            (block_back.is_some() && !block_back.unwrap().is_transparent)
+            {
+            continue;
+        }
+        
         let cube_handle = meshes.add(cube_mesh.clone());
         commands.spawn(PbrBundle {
             mesh: cube_handle,
@@ -187,6 +214,8 @@ fn spawn_chunk(mut commands: Commands,
             ..Default::default()
         });
     }
+
+    chunks.chunks.insert(Position::new(START_X as isize, START_Y as isize, START_Z as isize), chunk);
 }
 
 #[rustfmt::skip]

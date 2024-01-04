@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use std::collections::HashMap;
 
+use crate::block_types::BlockType;
+
 pub struct ChunkManagerPlugin;
 
 impl Plugin for ChunkManagerPlugin {
@@ -54,7 +56,14 @@ pub struct Chunk {
 
 #[derive(Component)]
 pub struct Block {
+    /// position of the block relative to the chunk
     pub local_position: Vec3, 
+    /// position of the block relative to the world
     pub absolute_position: Vec3,
-    pub visible: bool,
+    /// whether the block is visible or not
+    pub is_visible: bool,
+    /// the type of the block
+    pub block_type: BlockType,
+    /// whether the block is transparent or not. Used for rendering
+    pub is_transparent: bool,
 }

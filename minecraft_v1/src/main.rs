@@ -2,6 +2,7 @@ mod block_spawner;
 mod player_movement;
 mod load_texture_atlas;
 mod chunk_manager;
+mod block_types;
 
 use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, WireframeConfig}};
 use bevy_flycam::prelude::*;
