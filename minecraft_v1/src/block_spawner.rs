@@ -1,19 +1,22 @@
+use std::collections::HashMap;
+
 use bevy::{
     prelude::*,
-    render::render_resource::PrimitiveTopology
+    render::{render_resource::PrimitiveTopology, mesh::Indices}
 };
 // import meshvertextattribute
 use bevy_meshem::prelude::*;
 use crate::load_texture_atlas::TextureAtlas;
+use crate::chunk_manager::*;
 
 /// Constants for us to use.
-const FACTOR: usize = 100;
-const MESHING_ALGORITHM: MeshingAlgorithm = MeshingAlgorithm::Culling;
+const _FACTOR: usize = 100;
+const _MESHING_ALGORITHM: MeshingAlgorithm = MeshingAlgorithm::Culling;
 
 #[derive(Component)]
 struct Meshy {
-    ma: MeshingAlgorithm,
-    meta: MeshMD<u16>,
+    _ma: MeshingAlgorithm,
+    _meta: MeshMD<u16>,
 }
 
 #[derive(Event, Default)]
@@ -64,7 +67,7 @@ impl VoxelRegistry for BlockRegistry {
     }
 }
 
-fn spawn_culled_grid(
+fn _spawn_culled_grid(
     breg: Res<BlockRegistry>,
     texture_atlas: Res<TextureAtlas>,
     mut commands: Commands,
@@ -72,8 +75,8 @@ fn spawn_culled_grid(
     // wireframe_config: ResMut<WireframeConfig>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    let grid = [1; FACTOR * FACTOR * FACTOR];
-    let dims: Dimensions = (FACTOR, FACTOR, FACTOR);
+    let grid = [1; _FACTOR * _FACTOR * _FACTOR];
+    let dims: Dimensions = (_FACTOR, _FACTOR, _FACTOR);
 
     let (culled_mesh, metadata) = mesh_grid(
         dims,
@@ -81,7 +84,7 @@ fn spawn_culled_grid(
         &[Bottom],
         &grid,
         breg.into_inner(),
-        MESHING_ALGORITHM,
+        _MESHING_ALGORITHM,
         None,
     )
     .unwrap();
@@ -98,8 +101,8 @@ fn spawn_culled_grid(
             ..default()
         },
         Meshy {
-            ma: MESHING_ALGORITHM,
-            meta: metadata,
+            _ma: _MESHING_ALGORITHM,
+            _meta: metadata,
         },
     ));
 }
@@ -108,7 +111,8 @@ pub struct BlockSpawnerPlugin;
 
 impl Plugin for BlockSpawnerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_culled_grid)
+        app
+            .add_systems(Startup, spawn_chunk)
             .insert_resource(BlockRegistry {
                 block: vec![
                     Mesh::new(PrimitiveTopology::TriangleList),
@@ -131,4 +135,174 @@ impl Plugin for BlockSpawnerPlugin {
                 ],
             });
     }
+}
+
+/// spawn a 3d cube at the origin
+fn spawn_chunk(mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    _asset_server: Res<AssetServer>,
+    mut _materials: ResMut<Assets<StandardMaterial>>,
+    mut chunks: ResMut<ChunkManager>,
+) {
+    const CHUNK_X: u16 = 16;
+    const CHUNK_Y: u16 = 256;
+    const CHUNK_Z: u16 = 16;
+
+    const START_X: f32 = 0.0;
+    const START_Y: f32 = 0.0;
+    const START_Z: f32 = 0.0;
+    
+    let mut chunk = Chunk {
+        position: Vec3::new(START_X, START_Y, START_Z),
+        blocks: HashMap::default(),
+    };
+
+    for x in 0..CHUNK_X {
+        for y in 0..CHUNK_Y {
+            for z in 0..CHUNK_Z {
+                let block = Block {
+                    local_position: Vec3::new(x as f32, y as f32, z as f32),
+                    absolute_position: Vec3::new(x as f32 + START_X, y as f32 + START_Y, z as f32 + START_Z),
+                    visible: true,
+                };
+                chunk.blocks.insert(
+                    Position::new(x as isize, y as isize, z as isize),
+                    block,
+                );
+            }
+        }
+    }
+    chunks.chunks.insert(Position::new(START_X as isize, START_Y as isize, START_Z as isize), chunk);
+
+    let cube_mesh = create_cube_mesh();
+    for block in chunks.chunks.get(&Position::new(START_X as isize, START_Y as isize, START_Z as isize)).unwrap().blocks.values() {
+        let cube_handle = meshes.add(cube_mesh.clone());
+        commands.spawn(PbrBundle {
+            mesh: cube_handle,
+            material: _materials.add(StandardMaterial {
+                base_color: Color::rgb(0.8, 0.7, 0.6),
+                ..Default::default()
+            }),
+            transform: Transform::from_translation(block.absolute_position),
+            ..Default::default()
+        });
+    }
+}
+
+#[rustfmt::skip]
+fn create_cube_mesh() -> Mesh {
+    Mesh::new(PrimitiveTopology::TriangleList)
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_POSITION,
+        // Each array is an [x, y, z] coordinate in local space.
+        // Meshes always rotate around their local [0, 0, 0] when a rotation is applied to their Transform.
+        // By centering our mesh around the origin, rotating the mesh preserves its center of mass.
+        vec![
+            // top (facing towards +y)
+            [-0.5, 0.5, -0.5], // vertex with index 0
+            [0.5, 0.5, -0.5], // vertex with index 1
+            [0.5, 0.5, 0.5], // etc. until 23
+            [-0.5, 0.5, 0.5],
+            // bottom   (-y)
+            [-0.5, -0.5, -0.5],
+            [0.5, -0.5, -0.5],
+            [0.5, -0.5, 0.5],
+            [-0.5, -0.5, 0.5],
+            // right    (+x)
+            [0.5, -0.5, -0.5],
+            [0.5, -0.5, 0.5],
+            [0.5, 0.5, 0.5], // This vertex is at the same position as vertex with index 2, but they'll have different UV and normal
+            [0.5, 0.5, -0.5],
+            // left     (-x)
+            [-0.5, -0.5, -0.5],
+            [-0.5, -0.5, 0.5],
+            [-0.5, 0.5, 0.5],
+            [-0.5, 0.5, -0.5],
+            // back     (+z)
+            [-0.5, -0.5, 0.5],
+            [-0.5, 0.5, 0.5],
+            [0.5, 0.5, 0.5],
+            [0.5, -0.5, 0.5],
+            // forward  (-z)
+            [-0.5, -0.5, -0.5],
+            [-0.5, 0.5, -0.5],
+            [0.5, 0.5, -0.5],
+            [0.5, -0.5, -0.5],
+        ],
+    )
+    // Set-up UV coordinated to point to the upper (V < 0.5), "dirt+grass" part of the texture.
+    // Take a look at the custom image (assets/textures/array_texture.png)
+    // so the UV coords will make more sense
+    // Note: (0.0, 0.0) = Top-Left in UV mapping, (1.0, 1.0) = Bottom-Right in UV mapping
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_UV_0,
+        vec![
+            // Assigning the UV coords for the top side.
+            [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+            // Assigning the UV coords for the bottom side.
+            [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+            // Assigning the UV coords for the right side.
+            [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+            // Assigning the UV coords for the left side.
+            [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+            // Assigning the UV coords for the back side.
+            [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+            // Assigning the UV coords for the forward side.
+            [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+        ],
+    )
+    // For meshes with flat shading, normals are orthogonal (pointing out) from the direction of
+    // the surface.
+    // Normals are required for correct lighting calculations.
+    // Each array represents a normalized vector, which length should be equal to 1.0.
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_NORMAL,
+        vec![
+            // Normals for the top side (towards +y)
+            [0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+            // Normals for the bottom side (towards -y)
+            [0.0, -1.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, -1.0, 0.0],
+            [0.0, -1.0, 0.0],
+            // Normals for the right side (towards +x)
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            // Normals for the left side (towards -x)
+            [-1.0, 0.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            // Normals for the back side (towards +z)
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, 1.0],
+            // Normals for the forward side (towards -z)
+            [0.0, 0.0, -1.0],
+            [0.0, 0.0, -1.0],
+            [0.0, 0.0, -1.0],
+            [0.0, 0.0, -1.0],
+        ],
+    )
+    // Create the triangles out of the 24 vertices we created.
+    // To construct a square, we need 2 triangles, therefore 12 triangles in total.
+    // To construct a triangle, we need the indices of its 3 defined vertices, adding them one
+    // by one, in a counter-clockwise order (relative to the position of the viewer, the order
+    // should appear counter-clockwise from the front of the triangle, in this case from outside the cube).
+    // Read more about how to correctly build a mesh manually in the Bevy documentation of a Mesh,
+    // further examples and the implementation of the built-in shapes.
+    .with_indices(Some(Indices::U32(vec![
+        0,3,1 , 1,3,2, // triangles making up the top (+y) facing side.
+        4,5,7 , 5,6,7, // bottom (-y)
+        8,11,9 , 9,11,10, // right (+x)
+        12,13,15 , 13,14,15, // left (-x)
+        16,19,17 , 17,19,18, // back (+z)
+        20,21,23 , 21,22,23, // forward (-z)
+    ])))
 }

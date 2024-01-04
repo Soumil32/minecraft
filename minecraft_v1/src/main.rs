@@ -1,12 +1,14 @@
 mod block_spawner;
 mod player_movement;
 mod load_texture_atlas;
+mod chunk_manager;
 
 use bevy::{prelude::*, pbr::wireframe::{WireframePlugin, WireframeConfig}};
 use bevy_flycam::prelude::*;
 use block_spawner::BlockSpawnerPlugin;
 use player_movement::PlayerMovementPlugin;
 use load_texture_atlas::LoadTextureAtlasPlugin;
+use chunk_manager::ChunkManagerPlugin;
 
 fn main() {
     App::new()
@@ -20,10 +22,14 @@ fn main() {
             BlockSpawnerPlugin,
             PlayerMovementPlugin,
             LoadTextureAtlasPlugin,
+            ChunkManagerPlugin,
             WireframePlugin,
             PlayerPlugin,
         ))
-        .add_systems(Startup, (spawn_sun, use_wireframe))
+        .add_systems(Startup, (
+            spawn_sun, 
+            use_wireframe
+        ))
         .run();
 
 }
