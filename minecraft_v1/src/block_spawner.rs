@@ -212,11 +212,12 @@ fn spawn_chunk(mut commands: Commands,
             sides.push(Side::Back);
         }
         
-        let cube_mesh = create_cube_mesh(sides);
+        let cube_mesh = create_cube_mesh(vec![Side::Top, Side::Bottom, Side::Left, Side::Right, Side::Forward, Side::Back]);
         let cube_handle = meshes.add(cube_mesh);
         commands.spawn(PbrBundle {
             mesh: cube_handle,
             material: _materials.add(StandardMaterial {
+                cull_mode: None,
                 base_color: Color::rgb(0.8, 0.7, 0.6),
                 ..Default::default()
             }),
