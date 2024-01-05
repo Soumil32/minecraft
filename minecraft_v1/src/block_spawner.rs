@@ -177,12 +177,12 @@ fn spawn_chunk(mut commands: Commands,
 
     let cube_mesh = create_cube_mesh();
     for block in chunk.blocks.values() {
-        let block_above = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize + 1, block.local_position.z as isize));
-        let block_below = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize - 1, block.local_position.z as isize));
-        let block_left = chunk.blocks.get(&Position::new(block.local_position.x as isize - 1, block.local_position.y as isize, block.local_position.z as isize));
-        let block_right = chunk.blocks.get(&Position::new(block.local_position.x as isize + 1, block.local_position.y as isize, block.local_position.z as isize));
-        let block_front = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize, block.local_position.z as isize + 1));
-        let block_back = chunk.blocks.get(&Position::new(block.local_position.x as isize, block.local_position.y as isize, block.local_position.z as isize - 1));
+        let block_above = chunk.blocks.get(&(block.local_position - Vec3::new(0.0, -1.0, 0.0)).into());
+        let block_below = chunk.blocks.get(&(block.local_position - Vec3::new(0.0, 1.0, 0.0)).into());
+        let block_left = chunk.blocks.get(&(block.local_position - Vec3::new(1.0, 0.0, 0.0)).into());
+        let block_right = chunk.blocks.get(&(block.local_position + Vec3::new(1.0, 0.0, 0.0)).into());
+        let block_front = chunk.blocks.get(&(block.local_position + Vec3::new(0.0, 0.0, 1.0)).into());
+        let block_back = chunk.blocks.get(&(block.local_position - Vec3::new(0.0, 0.0, 1.0)).into());
 
         // if the block is None then it is an air block, meaning we should render it
         // if all the blocks are Some and even one is transparent, then we should render it
