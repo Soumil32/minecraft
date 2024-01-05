@@ -107,6 +107,15 @@ fn _spawn_culled_grid(
     ));
 }
 
+enum Side {
+    Top,
+    Bottom,
+    Forward,
+    Back,
+    Left,
+    Right,
+}
+
 pub struct BlockSpawnerPlugin;
 
 impl Plugin for BlockSpawnerPlugin {
@@ -174,8 +183,6 @@ fn spawn_chunk(mut commands: Commands,
             }
         }
     }
-
-    let cube_mesh = create_cube_mesh();
     for block in chunk.blocks.values() {
         let block_above = chunk.blocks.get(&(block.local_position - Vec3::new(0.0, -1.0, 0.0)).into());
         let block_below = chunk.blocks.get(&(block.local_position - Vec3::new(0.0, 1.0, 0.0)).into());
@@ -184,26 +191,29 @@ fn spawn_chunk(mut commands: Commands,
         let block_front = chunk.blocks.get(&(block.local_position + Vec3::new(0.0, 0.0, 1.0)).into());
         let block_back = chunk.blocks.get(&(block.local_position - Vec3::new(0.0, 0.0, 1.0)).into());
 
-        // if the block is None then it is an air block, meaning we should render it
-        // if all the blocks are Some and even one is transparent, then we should render it
-        // if all the blocks are Some and none are transparent, then we should not render it by continuing the loop
-        // the if statemnet should be a guard clause    
-        if block_above.is_some() && block_left.is_some() && block_right.is_some() && block_front.is_some() && block_back.is_some() && block_below.is_some() {
-            continue;
-        }
+        let mut sides = Vec::new();
 
-        if  (block.local_position.z != 0.0 && block.local_position.z != CHUNK_Z as f32 - 1.0) &&
-            (block_above.is_some() && !block_above.unwrap().is_transparent) && 
-            (block_below.is_some() && !block_below.unwrap().is_transparent) && 
-            (block_left.is_some() && !block_left.unwrap().is_transparent) && 
-            (block_right.is_some() && !block_right.unwrap().is_transparent) && 
-            (block_front.is_some() && !block_front.unwrap().is_transparent) && 
-            (block_back.is_some() && !block_back.unwrap().is_transparent)
-            {
-            continue;
+        if block_above.is_none() || (block_above.is_some() && block_above.unwrap().is_transparent && block_above.unwrap().is_visible) {
+            sides.push(Side::Top);
+        }
+        if block_below.is_none() || (block_below.is_some() && block_below.unwrap().is_transparent && block_below.unwrap().is_visible) {
+            sides.push(Side::Bottom);
+        }
+        if block_left.is_none() || (block_left.is_some() && block_left.unwrap().is_transparent && block_left.unwrap().is_visible) {
+            sides.push(Side::Left);
+        }
+        if block_right.is_none() || (block_right.is_some() && block_right.unwrap().is_transparent && block_right.unwrap().is_visible) {
+            sides.push(Side::Right);
+        }
+        if block_front.is_none() || (block_front.is_some() && block_front.unwrap().is_transparent && block_front.unwrap().is_visible) {
+            sides.push(Side::Forward);
+        }
+        if block_back.is_none() || (block_back.is_some() && block_back.unwrap().is_transparent && block_back.unwrap().is_visible) {
+            sides.push(Side::Back);
         }
         
-        let cube_handle = meshes.add(cube_mesh.clone());
+        let cube_mesh = create_cube_mesh(sides);
+        let cube_handle = meshes.add(cube_mesh);
         commands.spawn(PbrBundle {
             mesh: cube_handle,
             material: _materials.add(StandardMaterial {
@@ -219,8 +229,152 @@ fn spawn_chunk(mut commands: Commands,
 }
 
 #[rustfmt::skip]
-fn create_cube_mesh() -> Mesh {
-    Mesh::new(PrimitiveTopology::TriangleList)
+fn create_cube_mesh(sides: Vec<Side>) -> Mesh {
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    let mut attribute_positions = Vec::new();
+    let mut attribute_uvs = Vec::new();
+    let mut attribute_normals = Vec::new();
+    let mut indices = Vec::new();
+
+    for side in sides {
+        match side {
+            Side::Top => {
+                attribute_positions.extend_from_slice(&[
+                    [-0.5, 0.5, -0.5], // vertex with index 0
+                    [0.5, 0.5, -0.5], // vertex with index 1
+                    [0.5, 0.5, 0.5], // etc. until 23
+                    [-0.5, 0.5, 0.5],
+                ]);
+                attribute_uvs.extend_from_slice(&[
+                    [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+                ]);
+                attribute_normals.extend_from_slice(&[
+                    // Normals for the top side (towards +y)
+                    [0.0, 1.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                ]);
+                indices.extend_from_slice(&[
+                    0,3,1 , 1,3,2, // triangles making up the top (+y) facing side.
+                ]);
+            },
+            Side::Bottom => {
+                attribute_positions.extend_from_slice(&[
+                    // bottom   (-y)
+                    [-0.5, -0.5, -0.5],
+                    [0.5, -0.5, -0.5],
+                    [0.5, -0.5, 0.5],
+                    [-0.5, -0.5, 0.5],
+                ]);
+                attribute_uvs.extend_from_slice(&[
+                    [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+                ]);
+                attribute_normals.extend_from_slice(&[
+                    [0.0, -1.0, 0.0],
+                    [0.0, -1.0, 0.0],
+                    [0.0, -1.0, 0.0],
+                    [0.0, -1.0, 0.0],
+                ]);
+                indices.extend_from_slice(&[
+                    4,5,7 , 5,6,7, // bottom (-y)
+                ]);
+            },
+            Side::Right => {
+                attribute_positions.extend_from_slice(&[
+                    // right    (+x)
+                    [0.5, -0.5, -0.5],
+                    [0.5, -0.5, 0.5],
+                    [0.5, 0.5, 0.5], // This vertex is at the same position as vertex with index 2, but they'll have different UV and normal
+                    [0.5, 0.5, -0.5],
+                ]);
+                attribute_uvs.extend_from_slice(&[
+                    [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+                ]);
+                attribute_normals.extend_from_slice(&[
+                    // Normals for the right side (towards +x)
+                    [1.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0],
+                ]);
+
+                indices.extend_from_slice(&[
+                    8,11,9 , 9,11,10, // right (+x)
+                ]);
+            },
+            Side::Left => {
+                attribute_positions.extend_from_slice(&[
+                    // left     (-x)
+                    [-0.5, -0.5, -0.5],
+                    [-0.5, -0.5, 0.5],
+                    [-0.5, 0.5, 0.5],
+                    [-0.5, 0.5, -0.5],
+                ]);
+                attribute_uvs.extend_from_slice(&[
+                    [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+                ]);
+                attribute_normals.extend_from_slice(&[
+                    [-1.0, 0.0, 0.0],
+                    [-1.0, 0.0, 0.0],
+                    [-1.0, 0.0, 0.0],
+                    [-1.0, 0.0, 0.0],
+                ]);
+                indices.extend_from_slice(&[
+                    12,13,15 , 13,14,15, // left (-x)
+                ]);
+            },
+            Side::Back => {
+                attribute_positions.extend_from_slice(&[
+                    // back     (+z)
+                    [-0.5, -0.5, 0.5],
+                    [-0.5, 0.5, 0.5],
+                    [0.5, 0.5, 0.5],
+                    [0.5, -0.5, 0.5],
+                ]);
+                attribute_uvs.extend_from_slice(&[
+                    [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+                ]);
+                attribute_normals.extend_from_slice(&[
+                    [0.0, 0.0, 1.0],
+                    [0.0, 0.0, 1.0],
+                    [0.0, 0.0, 1.0],
+                    [0.0, 0.0, 1.0],
+                ]);
+                indices.extend_from_slice(&[
+                    16,19,17 , 17,19,18, // back (+z)
+                ]);
+            },
+            Side::Forward => {
+                attribute_positions.extend_from_slice(&[
+                    // forward  (-z)
+                    [-0.5, -0.5, -0.5],
+                    [-0.5, 0.5, -0.5],
+                    [0.5, 0.5, -0.5],
+                    [0.5, -0.5, -0.5],
+                ]);
+                attribute_uvs.extend_from_slice(&[
+                    [0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0],
+                ]);
+                attribute_normals.extend_from_slice(&[
+                    // Normals for the forward side (towards -z)
+                    [0.0, 0.0, -1.0],
+                    [0.0, 0.0, -1.0],
+                    [0.0, 0.0, -1.0],
+                    [0.0, 0.0, -1.0],
+                ]);
+                indices.extend_from_slice(&[
+                    20,21,23 , 21,22,23, // forward (-z)
+                ]);
+            }
+        }
+    }
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, attribute_positions);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, attribute_uvs);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, attribute_normals);
+    mesh.set_indices(Some(Indices::U32(indices)));
+    return mesh;
+    /*Mesh::new(PrimitiveTopology::TriangleList)
     .with_inserted_attribute(
         Mesh::ATTRIBUTE_POSITION,
         // Each array is an [x, y, z] coordinate in local space.
@@ -333,5 +487,5 @@ fn create_cube_mesh() -> Mesh {
         12,13,15 , 13,14,15, // left (-x)
         16,19,17 , 17,19,18, // back (+z)
         20,21,23 , 21,22,23, // forward (-z)
-    ])))
+    ])));*/
 }
