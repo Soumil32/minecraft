@@ -256,9 +256,6 @@ fn create_cube_mesh(sides: Vec<Side>) -> Mesh {
                     [0.0, 1.0, 0.0],
                     [0.0, 1.0, 0.0],
                 ]);
-                indices.extend_from_slice(&[
-                    0,3,1 , 1,3,2, // triangles making up the top (+y) facing side.
-                ]);
             },
             Side::Bottom => {
                 attribute_positions.extend_from_slice(&[
@@ -276,9 +273,6 @@ fn create_cube_mesh(sides: Vec<Side>) -> Mesh {
                     [0.0, -1.0, 0.0],
                     [0.0, -1.0, 0.0],
                     [0.0, -1.0, 0.0],
-                ]);
-                indices.extend_from_slice(&[
-                    4,5,7 , 5,6,7, // bottom (-y)
                 ]);
             },
             Side::Right => {
@@ -299,10 +293,6 @@ fn create_cube_mesh(sides: Vec<Side>) -> Mesh {
                     [1.0, 0.0, 0.0],
                     [1.0, 0.0, 0.0],
                 ]);
-
-                indices.extend_from_slice(&[
-                    8,11,9 , 9,11,10, // right (+x)
-                ]);
             },
             Side::Left => {
                 attribute_positions.extend_from_slice(&[
@@ -321,9 +311,6 @@ fn create_cube_mesh(sides: Vec<Side>) -> Mesh {
                     [-1.0, 0.0, 0.0],
                     [-1.0, 0.0, 0.0],
                 ]);
-                indices.extend_from_slice(&[
-                    12,13,15 , 13,14,15, // left (-x)
-                ]);
             },
             Side::Back => {
                 attribute_positions.extend_from_slice(&[
@@ -341,9 +328,6 @@ fn create_cube_mesh(sides: Vec<Side>) -> Mesh {
                     [0.0, 0.0, 1.0],
                     [0.0, 0.0, 1.0],
                     [0.0, 0.0, 1.0],
-                ]);
-                indices.extend_from_slice(&[
-                    16,19,17 , 17,19,18, // back (+z)
                 ]);
             },
             Side::Forward => {
@@ -364,11 +348,13 @@ fn create_cube_mesh(sides: Vec<Side>) -> Mesh {
                     [0.0, 0.0, -1.0],
                     [0.0, 0.0, -1.0],
                 ]);
-                indices.extend_from_slice(&[
-                    20,21,23 , 21,22,23, // forward (-z)
-                ]);
             }
         }
+        let start_index = attribute_positions.len() as u32;
+        indices.extend_from_slice(&[
+            start_index, start_index + 3, start_index + 1,
+            start_index + 1, start_index + 3, start_index + 2,
+]);
     }
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, attribute_positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, attribute_uvs);
